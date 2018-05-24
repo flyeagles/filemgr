@@ -6,7 +6,7 @@ class DiskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Disk
         fields = ('serial_no', 'disk_model', 'disk_index', 'size', 'partitions', 'SMART_pass',
-                  'SMART_info', 'machine', 'media_type')
+                  'SMART_info', 'machine', 'media_type', "is_raid1")
 
 
 class VolumeSerializer(serializers.ModelSerializer):

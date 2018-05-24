@@ -1,3 +1,4 @@
+import {setupClipMonitor} from './clip_monitor.js'; // or './module'
 
 $(function () {  // on page load
     
@@ -10,7 +11,7 @@ $(function () {  // on page load
             "Free Size: " +  numberWithCommas(vol_model.get("size_free")) + " bytes.";
     };
 
-    var activeNodeFullVolPath = '';
+    var gActiveNodeFullVolPath = '';
 
     // Create the tree inside the <div id="tree"> element.
     var init_folder_tree = {
@@ -29,24 +30,24 @@ $(function () {  // on page load
                 // 'title' | 'prefix' | 'expander' | 'checkbox' | 'icon'
                 targetType = data.targetType;
             if (node.data.item_type == 'fold') {
-                activeNodeFullVolPath = node.data.fullvolpath;
+                gActiveNodeFullVolPath = node.data.fullvolpath;
 
                 // need refresh the file list tree with the data for this folder
                 var folders = new Folder(data.node.data.fullvolpath, data.node.data.volume_model_id);
-                folders.fetch_render(null, node.data.disk_model_id, file_list, false);
+                folders.fetch_render(null, node.data.disk_model_id, gFile_list, false);
 
-                volume_data = all_volume_map[node.data.volume_model_id];
+                var volume_data = gAll_volume_map[node.data.volume_model_id];
                 document.getElementById("volume_info_text").value = func_assemble_vol_info(volume_data);
 
             } else if (node.data.item_type == 'disk') {
                 document.getElementById("volume_info_text").value = "Volume Information";
             } else {
-                volume_data = all_volume_map[node.data.volume_model_id];
+                var volume_data = gAll_volume_map[node.data.volume_model_id];
                 document.getElementById("volume_info_text").value = func_assemble_vol_info(volume_data);
             }
 
 
-            disk = diskcollection.get(node.data.disk_model_id);
+            var disk = gDiskcollection.get(node.data.disk_model_id);
             document.getElementById("disk_info_text").value = disk.get("SMART_info");
 
             // we could return false to prevent default handling, i.e. generating
@@ -77,7 +78,7 @@ $(function () {  // on page load
                 rootfolders.fetch_render(dfd, data.node.data.disk_model_id);
             } else if (data.node.data.item_type == 'fold') {
                 var folders = new Folder(data.node.data.fullvolpath, data.node.data.volume_model_id);
-                folders.fetch_render(dfd, data.node.data.disk_model_id, file_list, true);
+                folders.fetch_render(dfd, data.node.data.disk_model_id, gFile_list, true);
             } else {
                 dfd.resolve([]);
             };
@@ -88,8 +89,8 @@ $(function () {  // on page load
 
     console.log("Hello world");
 
-    var volume_disk_map = {};  // map from volume ID to disk ID
-    var all_volume_map = {};   // map from volume ID to volume Model object
+    var gVolume_disk_map = {};  // map from volume ID to disk ID
+    var gAll_volume_map = {};   // map from volume ID to volume Model object
 
     var init_file_list = {
         extensions: ["filter"],
@@ -105,12 +106,12 @@ $(function () {  // on page load
                 // 'title' | 'prefix' | 'expander' | 'checkbox' | 'icon'
                 targetType = data.targetType;
 
-            activeNodeFullVolPath = node.data.fullvolpath;
+            gActiveNodeFullVolPath = node.data.fullvolpath;
 
             var filedups = new FileDuplicates(node.data.fullvolpath);
             filedups.fetch_render("fetching folder");
 
-            filedetail = file_obj_dict[node.title];
+            var filedetail = gFile_obj_dict[node.title];
             var mod_date = new Date(filedetail.get("mod_time") * 1000);
             document.getElementById("file_info_text").value = "Size: " + numberWithCommas(filedetail.get("size")) + " bytes\n" +
                 "Mod time: " + mod_date;
@@ -121,17 +122,13 @@ $(function () {  // on page load
         },
     };
     $("#file_list").fancytree(init_file_list);
-    var file_list = $("#file_list").fancytree("getTree");
+    var gFile_list = $("#file_list").fancytree("getTree");
 
 
 
     // Note: Loading and initialization may be asynchronous, so the nodes may not be accessible yet.
+    var gTree = $("#folder_tree").fancytree("getTree");
 
-    var tree = $("#folder_tree").fancytree("getTree");
-
-    // Note: Loading and initialization may be asynchronous, so the nodes may not be accessible yet.
-
-    var tree = $("#folder_tree").fancytree("getTree");
 
     document.getElementById("check_scroll").onclick = function () {
         var scr_ele = document.getElementById("folder_tree_scr");
@@ -157,24 +154,24 @@ $(function () {  // on page load
         },
     });
 
-    var explorer = new ModelForExplorer();
+    var gExplorer = new ModelForExplorer();
 
     var open_explorer = function(activeNodeFullVolPath) {
         if (activeNodeFullVolPath == '') {
             return;
         }
 
-        explorer.setSelect(activeNodeFullVolPath);
-        explorer.fetch();
+        gExplorer.setSelect(activeNodeFullVolPath);
+        gExplorer.fetch();
     };
 
     document.getElementById("open_explorer").onclick = function(event) {
-        open_explorer(activeNodeFullVolPath);
+        open_explorer(gActiveNodeFullVolPath);
     };
 
     document.addEventListener('keyup', (event) => {
         if (event.code == 'ArrowUp') {
-            open_explorer(activeNodeFullVolPath);
+            open_explorer(gActiveNodeFullVolPath);
         }
     });
     
@@ -202,7 +199,7 @@ $(function () {  // on page load
         },
     });
 
-    var present_disk_set = new Set();
+    var gPresent_disk_set = new Set();
     var PresentDiskCollection = Backbone.Collection.extend({
         // el - stands for element. Every view has an element associated with HTML content, will be rendered. 
         model: Disk,
@@ -213,17 +210,17 @@ $(function () {  // on page load
             this.fetch({
                 success: function (collection, response, options) {
                     _.each(collection.models, function (model) {
-                        present_disk_set.add(model.get("serial_no"));
+                        gPresent_disk_set.add(model.get("serial_no"));
                     });
 
                     // move this here to ensure the timing of two fetch is correct.
-                    diskcollection.fetch_render(diskview);
+                    gDiskcollection.fetch_render(gDiskview);
                 },
             });
         },
     });
-    var pres_disk_coll = new PresentDiskCollection();
-    pres_disk_coll.fetch_add();
+    var gPres_disk_coll = new PresentDiskCollection();
+    gPres_disk_coll.fetch_add();
     
     var DiskCollectionView = Backbone.View.extend({
         // el: "#stock_transaction_sect",
@@ -235,14 +232,17 @@ $(function () {  // on page load
 
         render: function (diskcollection) {
             var self = this;
-            var activeNode = tree.getRootNode();
+            var activeNode = gTree.getRootNode();
 
+            var newnode;
             _.each(diskcollection.models, function (model) {
 
                 // Append a new child node
-                icon_url = present_disk_set.has(model.get("serial_no")) ?
+                var icon_url = gPresent_disk_set.has(model.get("serial_no")) ?
                     "/static/fileondisk/icons/ic_computer_black_24px.svg" :
                     "/static/fileondisk/icons/turn-off-icon-24.png";
+
+                icon_url = model.get("is_raid1") ==0 ? icon_url: "/static/fileondisk/icons/Places-document-multiple-icon-24.png"; 
 
                 newnode = activeNode.addChildren({
                     title: model.get("disk_model"),
@@ -284,9 +284,9 @@ $(function () {  // on page load
             var self = this;
             this.fetch({
                 success: function (collection, response, options) {
-                    nodes = []
+                    var nodes = [];
                     _.each(collection.models, function (model) {
-                        all_volume_map[model.get("id")] = model;
+                        gAll_volume_map[model.get("id")] = model;
                         nodes.push({
                             title: model.get("volume_name"),
                             lazy: true, folder: true,
@@ -297,7 +297,7 @@ $(function () {  // on page load
                             volume_model_id: model.get("id"),
                         });
 
-                        volume_disk_map[model.get("id")] = in_disk_model_id;
+                        gVolume_disk_map[model.get("id")] = in_disk_model_id;
                     });
 
                     dfd.resolve(nodes);
@@ -332,8 +332,8 @@ $(function () {  // on page load
     });
     
     document.getElementById("unmonitor_root").onclick = function(event) {
-        console.info(activeNodeFullVolPath);
-        rootFolder = new RootFolder(activeNodeFullVolPath);
+        console.info(gActiveNodeFullVolPath);
+        rootFolder = new RootFolder(gActiveNodeFullVolPath);
         rootFolder.destroy({
             success: function() {
                 location.reload();
@@ -357,7 +357,7 @@ $(function () {  // on page load
             var self = this;
             this.fetch({
                 success: function (collection, response, options) {
-                    nodes = []
+                    var nodes = []
                     _.each(collection.models, function (model) {
                         nodes.push({
                             title: model.get("fname"),
@@ -381,9 +381,9 @@ $(function () {  // on page load
         },
     });
 
-    var diskview = new DiskCollectionView({});
+    var gDiskview = new DiskCollectionView({});
 
-    var diskcollection = new DiskCollection();
+    var gDiskcollection = new DiskCollection();
     // diskcollection.fetch_render(diskview);  move to fetch/success of presentdisks.
 
 
@@ -393,7 +393,7 @@ $(function () {  // on page load
         In-Folder File List Section
     ===========================================*/
 
-    var file_obj_dict = {};
+    var gFile_obj_dict = {};
 
     var Folder = Backbone.Collection.extend({
         model: FileInfo,
@@ -414,8 +414,8 @@ $(function () {  // on page load
                     file_list.clear();
                     var file_list_root_node = file_list.getRootNode();
 
-                    file_obj_dict = {};
-                    nodes = []
+                    var file_obj_dict = {};
+                    var nodes = []
                     _.each(collection.models, function (model) {
                         if (model.get('file_type') != 'fold') {
 
@@ -479,9 +479,9 @@ $(function () {  // on page load
                 targetType = data.targetType;
 
             if (node.data.item_type != "disknode" && node.data.item_type != "volumenode") {
-                activeNodeFullVolPath = node.data.fullvolpath;
+                gActiveNodeFullVolPath = node.data.fullvolpath;
 
-                filedetail = dup_file_obj_dict[node.data.fullvolpath];
+                var filedetail = gDup_file_obj_dict[node.data.fullvolpath];
                 var mod_date = new Date(filedetail.get("mod_time") * 1000);
                 document.getElementById("dup_file_info_text").value = "Size: " + numberWithCommas(filedetail.get("size")) + " bytes\n" +
                     "Mod time: " + mod_date;
@@ -491,17 +491,17 @@ $(function () {  // on page load
                 var folders = new Folder(filedetail.get("folder"), data.node.data.volume_id);
                 folders.fetch_render(null, node.data.disk_model_id, dup_folder_tree, false);
 
-                volume_data = all_volume_map[node.data.volume_id];
+                var volume_data = gAll_volume_map[node.data.volume_id];
                 document.getElementById("tar_volume_info_text").value = func_assemble_vol_info(volume_data);
 
             } else if (node.data.item_type == "volume") {
-                activeNodeFullVolPath = node.data.fullvolpath;
+                gActiveNodeFullVolPath = node.data.fullvolpath;
 
-                volume_data = all_volume_map[node.data.volume_id];
+                var volume_data = gAll_volume_map[node.data.volume_id];
                 document.getElementById("tar_volume_info_text").value = func_assemble_vol_info(volume_data);
             }
 
-            disk = diskcollection.get(node.data.disk_model_id);
+            var disk = gDiskcollection.get(node.data.disk_model_id);
             document.getElementById("tar_disk_info_text").value = disk.get("SMART_info");
             
             // we could return false to prevent default handling, i.e. generating
@@ -510,9 +510,9 @@ $(function () {  // on page load
         },
     };
     $("#duplicate_files").fancytree(init_file_dup_list);
-    var duplicate_files = $("#duplicate_files").fancytree("getTree");
+    var gDuplicate_files = $("#duplicate_files").fancytree("getTree");
 
-    var dup_file_obj_dict = {};     // all the file objects in the Dup File List tree
+    var gDup_file_obj_dict = {};     // all the file objects in the Dup File List tree
 
     var dup_file_list_fetch_render = function (msg_part) {
         var self = this;
@@ -521,9 +521,9 @@ $(function () {  // on page load
 
                 document.getElementById("dup_file_count").value = collection.models.length;
     
-                duplicate_files.clear();
-                var dup_file_list_root_node = duplicate_files.getRootNode();
-                dup_file_obj_dict = {};
+                gDuplicate_files.clear();
+                var dup_file_list_root_node = gDuplicate_files.getRootNode();
+                gDup_file_obj_dict = {};
 
                 var dup_disk_file_map = {};
                 var disk_id_set = new Set();
@@ -536,9 +536,9 @@ $(function () {  // on page load
                         return;
                     }
 
-                    dup_file_obj_dict[model.get("fullvolpath")] = model;
-                    volume_id = model.get("volume_id");
-                    disk_mid = volume_disk_map[volume_id];
+                    gDup_file_obj_dict[model.get("fullvolpath")] = model;
+                    var volume_id = model.get("volume_id");
+                    var disk_mid = gVolume_disk_map[volume_id];
 
                     disk_id_set.add(disk_mid);
                     if (dup_disk_file_map.hasOwnProperty(""+disk_mid)) {
@@ -550,20 +550,20 @@ $(function () {  // on page load
                         }
                     } else {
                         var vol_file_map = {};
-                        vol_file_map[volume_id] =  [all_volume_map[volume_id], model];
+                        vol_file_map[volume_id] =  [gAll_volume_map[volume_id], model];
                         dup_disk_file_map[""+disk_mid] = vol_file_map;
                     };
 
                     if (firstitem) {
                         firstitem = false;
 
-                        volume_data = all_volume_map[volume_id];
+                        var volume_data = gAll_volume_map[volume_id];
                         document.getElementById("tar_volume_info_text").value = func_assemble_vol_info(volume_data);
 
-                        disk = diskcollection.get(disk_mid);
+                        var disk = gDiskcollection.get(disk_mid);
                         document.getElementById("tar_disk_info_text").value = disk.get("SMART_info");
 
-                        filedetail = model;
+                        var filedetail = model;
                         var mod_date = new Date(filedetail.get("mod_time") * 1000);
                         document.getElementById("dup_file_info_text").value = "Size: " + numberWithCommas(filedetail.get("size")) + " bytes\n" +
                             "Mod time: " + mod_date;
@@ -572,9 +572,9 @@ $(function () {  // on page load
 
                 var disk_id_list = Array.from(disk_id_set);
                 _.each(disk_id_list, function(disk_mid) {
-                    disk_obj = diskcollection.get(disk_mid)
+                    var disk_obj = gDiskcollection.get(disk_mid)
 
-                    icon_url = present_disk_set.has(disk_obj.get("serial_no")) ?
+                    var icon_url = gPresent_disk_set.has(disk_obj.get("serial_no")) ?
                         "/static/fileondisk/icons/ic_computer_black_24px.svg" :
                         "/static/fileondisk/icons/turn-off-icon-24.png";
 
@@ -588,10 +588,10 @@ $(function () {  // on page load
                         disk_model_id: disk_mid,
                     });
     
-                    vol_file_map = dup_disk_file_map["" + disk_mid];
+                    var vol_file_map = dup_disk_file_map["" + disk_mid];
                     _.each(Object.getOwnPropertyNames(vol_file_map), function (propName) {
-                        volume_files = vol_file_map[propName];
-                        volume_id = volume_files[0].get("id");
+                        var volume_files = vol_file_map[propName];
+                        var volume_id = volume_files[0].get("id");
                         var vol_root_node = disk_root_node.addNode({
                             title: volume_files[0].get("volume_name"),
                             lazy: false,
@@ -602,12 +602,12 @@ $(function () {  // on page load
                             disk_model_id: disk_mid,
                         });
 
-                        vol_file_len = volume_files.length;
-                        for (index = 1; index < vol_file_len; index++) {
+                        var vol_file_len = volume_files.length;
+                        for (var index = 1; index < vol_file_len; index++) {
                             // skip first item, which is the volume information
-                            fileinfo = volume_files[index];
+                            var fileinfo = volume_files[index];
 
-                            this_node = vol_root_node.addNode({
+                            var this_node = vol_root_node.addNode({
                                 title: fileinfo.get("fname"),
                                 lazy: false,
                                 folder: false,
@@ -626,7 +626,7 @@ $(function () {  // on page load
 
                 });
 
-                duplicate_files.render();
+                gDuplicate_files.render();
             },
 
             error: function (collection, response, options) {
@@ -644,22 +644,6 @@ $(function () {  // on page load
         url: function () {
             var self = this;
             return 'file/' + self.fullvolpath + '/';
-        },
-
-        fetch_render: dup_file_list_fetch_render,
-    });
-
-
-    var FileSearchResults = Backbone.Collection.extend({
-        model: FileInfo,
-        initialize: function (searchtext) {
-            this.searchtext = searchtext;
-            this.fullvolpath = "";   // to accommodate dup_fie_list processing
-        },
-
-        url: function () {
-            var self = this;
-            return 'search/' + self.searchtext + '/';
         },
 
         fetch_render: dup_file_list_fetch_render,
@@ -685,7 +669,7 @@ $(function () {  // on page load
                 // 'title' | 'prefix' | 'expander' | 'checkbox' | 'icon'
                 targetType = data.targetType;
 
-            activeNodeFullVolPath = node.data.fullvolpath;
+            gActiveNodeFullVolPath = node.data.fullvolpath;
 
             return true;
         },
@@ -698,6 +682,27 @@ $(function () {  // on page load
 
 
 
+    /* ===========================================
+        Search File Handling
+    ===========================================*/
+
+    var FileSearchResults = Backbone.Collection.extend({
+        model: FileInfo,
+        initialize: function (searchtext) {
+            this.searchtext = searchtext;
+            this.fullvolpath = "";   // to accommodate dup_fie_list processing
+        },
+
+        url: function () {
+            var self = this;
+            return 'search/' + self.searchtext + '/';
+        },
+
+        fetch_render: dup_file_list_fetch_render,
+    });
+
+
+    
     var search_file = function () {
         var term = document.getElementById("search_file_input").value
         var searchresults = new FileSearchResults(term);
@@ -718,39 +723,84 @@ $(function () {  // on page load
         search_file();
     };
 
-    var wsurl = "ws://127.0.0.1:15678/";
-    console.log("Connect to " + wsurl);
-    
-    var ws = null;
-    var monitorClipWS = function() {
-        document.getElementById("ws_status").value = 'Try to connect to WS Server ' + wsurl;
-        ws = new WebSocket(wsurl);
-        ws.onopen = function() {
-            document.getElementById("ws_status").value = 'Connected to WS Server ' + wsurl;
-        };
-        ws.onmessage = function (event) {
-            console.log("Get websocket data " + event.data );
-            if (event.data.length > 0 ) {
-                document.getElementById("search_file_input").value = event.data;
-                search_file();
-            };
-        };
+    /* ===========================================
+        Find files duplicated with RAID1 items
+    ===========================================*/
 
-        ws.onerror = function(event) {
-            document.getElementById("ws_status").value = 'Error in connection to WS Server ' + wsurl;
-            console.error(event);
-            ws.close();
-            window.setTimeout(monitorClipWS, 1500);  // retry after 1.5 seconds.
-        };
-        /*
-        ws.onclose = function(event) {
-            document.getElementById("ws_status").value = 'Close connection to WS Server ' + wsurl;
-            ws.close();
-            window.setTimeout(monitorClipWS, 5000);  // retry after 5 seconds.
-        };*/
+    var Raid1DupFileSearchResults = Backbone.Collection.extend({
+        model: FileInfo,
+        initialize: function (searchfolder) {
+            this.searchfolder = searchfolder;
+            this.fullvolpath = "";   // to accommodate dup_fie_list processing
+        },
+
+        url: function () {
+            var self = this;
+            return 'findraid1dup/' + self.searchfolder + '/';
+        },
+
+        fetch_render: dup_file_list_fetch_render,
+    });
+
+    var find_raid1_dup_file = function () {
+        var term = document.getElementById("find_dup_file_input").value
+        var searchresults = new Raid1DupFileSearchResults(term);
+        searchresults.fetch_render("Find RAID1 Duplicates");
+    };
+    
+    document.getElementById("find_dup_file_input").onfocus = function () {
+        document.getElementById("find_dup_file_input").value = "";
     };
 
+    $("#find_dup_file_input").on('keyup', function (key) {
+        if (key.keyCode == 13) { // ENTER key
+            find_raid1_dup_file();
+        };
+    });
+
+    document.getElementById("raid1_dup_search_button").onclick = function () {
+        find_raid1_dup_file();
+    };
+    
+
+    /* ===========================================
+        Delete files duplicated with RAID1 items
+    ===========================================*/
+
+    var Raid1DupFileDeleteResults = Backbone.Collection.extend({
+        model: FileInfo,
+        initialize: function (searchfolder) {
+            this.searchfolder = searchfolder;
+            this.fullvolpath = "";   // to accommodate dup_fie_list processing
+        },
+
+        url: function () {
+            var self = this;
+            return 'deletedup/' + self.searchfolder + '/';
+        },
+
+        fetch_render: dup_file_list_fetch_render,
+    });
+
+    var delete_raid1_dup_file = function () {
+        var term = document.getElementById("find_dup_file_input").value
+        var searchresults = new Raid1DupFileDeleteResults(term);
+        searchresults.fetch_render("Delete RAID1 Duplicates");
+    };
+    
+    document.getElementById("raid1_dup_delete_button").onclick = function () {
+
+        if (window.confirm("Do you really want to delete those files?")) {
+            delete_raid1_dup_file();
+        } else {
+            find_raid1_dup_file();
+        }
+    };
+
+
+    var monitorClipWS = setupClipMonitor(search_file);
     monitorClipWS();
 
-
 });
+
+

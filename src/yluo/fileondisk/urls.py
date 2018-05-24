@@ -27,11 +27,17 @@ urlpatterns = [
     url(r'^folders/(?P<fullvolpath>.+)/$', views.Folder.as_view()),
     url(r'^file/(?P<fullvolpath>.+)/$', views.FileDuplicates.as_view()),
     url(r'^search/(?P<searchtext>.+)/$', views.FileSearchResult.as_view()),
+    url(r'^findraid1dup/(?P<target_folder>.+)/$', views.FindRAID1Duplicates.as_view()),
+    url(r'^deletedup/(?P<target_folder>.+)/$', views.DeleteRAID1Duplicates.as_view()),
+    
+
     url(r'^presentdisks/$', views.PresentDiskList.as_view()),
 
     url(r'^explore/(?P<selection>.+)/$', views.OpenExplorer.as_view()),
 
     path('crawl/', views.FolderCrawler.as_view(), name='crawl'),
+    path('setraid1/', views.Raid1Crawler.as_view(), name='setraid1'),
+
 ]
 
 

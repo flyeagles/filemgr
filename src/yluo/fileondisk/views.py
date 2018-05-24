@@ -24,11 +24,12 @@ import urllib
 import ctypes
 import os
 import subprocess
+import winshell
 
 # Local objects
 from .models import Disk, Volume, FileInfo, CrawlRoot
 from .serializers import DiskSerializer, VolumeSerializer, FileInfoSerializer, CrawlRootSerializer
-from .crawler import crawl_folder
+from .crawler import crawl_folder, crawl_as_raid1, collect_folder_tree, FileObject
 from .systeminfo import  HardDiskInformation, RawSystemInformation
 
 
@@ -93,6 +94,14 @@ class FolderCrawler(APIView):
     def post(self, request):
         crawl_folder(request.POST['crawl_folder'])
         return HttpResponseRedirect(reverse('fileondisk:index'), {'latest_question_list': Question.objects.all()})
+
+
+class Raid1Crawler(APIView):
+
+    def post(self, request):
+        crawl_as_raid1(request.POST['raid_folder'])
+        return HttpResponseRedirect(reverse('fileondisk:index'), {'latest_question_list': Question.objects.all()})
+
 
 
 
@@ -191,6 +200,102 @@ class FileSearchResult(APIView):
         searchmatches = qs
         fileinfoserializer = FileInfoSerializer(searchmatches, many=True)
         return Response(fileinfoserializer.data)
+
+
+def getFilesOnRAID1():
+    '''
+    Get all fileInfo objects that exist on RAID1 disk.
+    '''
+    diskset = Disk.objects.filter(is_raid1=1)
+    volumeset = Volume.objects.filter(disk__in=diskset)
+    fileset = FileInfo.objects.filter(volume__in=volumeset)
+
+    return fileset
+
+
+def isRAID1Drive(target_folder):
+    drive = target_folder[0:2]
+    rawsysinfo = RawSystemInformation()
+    vol_id = rawsysinfo.get_volume_id(drive)
+
+    diskset = Disk.objects.filter(volume__id__exact=vol_id)
+    for disk in list(diskset):
+        if disk.is_raid1 == 1:
+            return True
+    
+    return False
+
+def getMatchedFileInfos(target_folder):
+    if isRAID1Drive(target_folder):
+        return ( FileInfo.objects.none(), [] )
+
+    raid1_files_set = getFilesOnRAID1()
+    # we need crawl the target folder and get all the files in the folder tree.
+    all_file_objects_in_target_folder = []
+    collect_folder_tree(target_folder, all_file_objects_in_target_folder)
+
+
+    # now we need filter the RAID1 file set with those files in the all_file_objects_in_target_folder
+    query_fields = ({ 'fname': fobj.fname, 'size': fobj.fsize} for fobj in all_file_objects_in_target_folder)
+
+    queryset = raid1_files_set.none()
+    for query_kwarg in query_fields:
+        queryset |= raid1_files_set.filter(**query_kwarg)
+
+    searchmatches = queryset.distinct()
+
+    found_files = list(searchmatches)
+    found_file_set = { FileObject(found_file.fname, found_file.size, "") for found_file in found_files }
+
+    dup_files_in_target = []
+    for fileobj in all_file_objects_in_target_folder:
+        if fileobj in found_file_set:
+            dup_files_in_target.append(fileobj)
+
+    print("============ {cnt} Files to be deleted!!!! =================".format(cnt=len(dup_files_in_target)))
+    for fileobj in dup_files_in_target:
+        print(str(fileobj))
+    print("=============================================")
+    
+    return (searchmatches, dup_files_in_target)
+
+class FindRAID1Duplicates(APIView):
+    '''
+    Collect files in target folder, and list those duplilcated with existing items in RAID1 disks
+    '''
+    def get(self, request, target_folder):
+        '''
+        select * from fileinfo where 
+        '''
+        print("Get findRaid1Duplicates:" + target_folder)
+
+        (searchmatches, dup_files_in_target) = getMatchedFileInfos(target_folder)
+
+        fileinfoserializer = FileInfoSerializer(searchmatches, many=True)
+        return Response(fileinfoserializer.data)
+
+
+class DeleteRAID1Duplicates(APIView):
+    '''
+    Collect files in target folder, and list those duplilcated with existing items in RAID1 disks
+    '''
+    def get(self, request, target_folder):
+        '''
+        select * from fileinfo where 
+        '''
+        print("Get DeleteRAID1Duplicates:" + target_folder)
+
+        (searchmatches, dup_files_in_target) = getMatchedFileInfos(target_folder)
+
+        for fileobj in dup_files_in_target:
+            filepath = os.path.abspath(fileobj.folder + '/' + fileobj.fname)
+            winshell.delete_file(filepath)
+            
+        print("********  {cnt} Files are deleted!!!!!! =============".format(cnt=len(dup_files_in_target)))
+
+        fileinfoserializer = FileInfoSerializer(searchmatches, many=True)
+        return Response(fileinfoserializer.data)
+
 
 
 import win32gui

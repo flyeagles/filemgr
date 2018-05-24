@@ -1,5 +1,4 @@
-
-create table  if not exists diskinfo
+create table  if not exists fileondisk_disk
 (
     serial_no text,
     model text,
@@ -10,10 +9,11 @@ create table  if not exists diskinfo
     SMART_info text,
     machine text,
     media_type text,
+    is_raid1 integer, -- value 1 means this disk is RAID1, thus offer replication automatically. value 0 means no duplication.
     primary key (serial_no)
 ) ;
 
-create table if not exists volumeinfo
+create table if not exists fileondisk_volume
 (
     id integer, -- value of volume serial number
     volume_name text,
@@ -56,3 +56,7 @@ pragma foreign_keys = on;  -- turn on foreign key constraint
 
 select fname, vol_id from fileinfo f1 where folder not in
  (select fullname from fileinfo  f2 where f2.vol_id = f1.vol_id)
+
+
+.headers on 
+.tables

@@ -36,6 +36,7 @@ class Disk(models.Model):
         SMART_info text,
         machine text,
         media_type text,
+        is_raid1 integer, -- 1 means RAID1, 0 means no-raid.
         primary key (serial_no)
     '''
     serial_no = models.TextField(primary_key=True)
@@ -47,6 +48,7 @@ class Disk(models.Model):
     SMART_info = models.TextField()
     machine = models.TextField()
     media_type = models.TextField()
+    is_raid1 = models.IntegerField(default=0)
 
     def __str__(self):
         return self.disk_model
@@ -65,6 +67,7 @@ class Volume(models.Model):
     volume_name = models.TextField()
     size = models.IntegerField()
     size_free = models.IntegerField()
+
     disk = models.ForeignKey('Disk', on_delete=models.PROTECT)
 
 
@@ -79,6 +82,7 @@ class CrawlRoot(models.Model):
     fname = models.TextField()
     folder = models.TextField()    # should include volumeID
     fullvolpath = models.TextField()   # use default int ID, that proably is faster.
+
     volume = models.ForeignKey('Volume', on_delete=models.PROTECT)
 
 
@@ -102,4 +106,5 @@ class FileInfo(models.Model):
     folder = models.TextField()    # should include volumeID
     # fullname = models.TextField()  
     fullvolpath = models.TextField()   # use default int ID, that proably is faster.
+    
     volume = models.ForeignKey('Volume', on_delete=models.PROTECT)

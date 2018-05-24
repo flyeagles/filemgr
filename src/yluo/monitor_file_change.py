@@ -20,6 +20,10 @@ hd_list = HardDiskInformation()
 vol_list = RawSystemInformation()
 
 
+def escapeForSQLite(in_str):
+    return in_str.replace('\'', "''")
+
+
 '''
 with connection.cursor() as cur:
     cur.executemany('' 'INSERT INTO fileondisk_fileinfo
@@ -101,7 +105,8 @@ class FODFileSystemEventHandler(watchdog.events.FileSystemEventHandler):
 
         db_exec = DatabaseExecutor(db_file_name)
         with db_exec:
-            delete_sql = '''delete from fileondisk_fileinfo where fullvolpath like '{fvp}%' '''.format(fvp=str(volume_id)+path[2:])
+            delete_sql = '''delete from fileondisk_fileinfo where fullvolpath like '{fvp}%' '''.format(fvp=escapeForSQLite(str(volume_id)+path[2:]))
+            print(delete_sql)
             db_exec.execute(delete_sql)
         
 
@@ -131,7 +136,7 @@ class FODFileSystemEventHandler(watchdog.events.FileSystemEventHandler):
 
         db_exec = DatabaseExecutor(db_file_name)
         with db_exec:
-            delete_sql = '''delete from fileondisk_fileinfo where fullvolpath = '{fvp}' '''.format(fvp=fullvolpath)
+            delete_sql = '''delete from fileondisk_fileinfo where fullvolpath = '{fvp}' '''.format(fvp=escapeForSQLite(fullvolpath))
             db_exec.execute(delete_sql)
             insert_sql = '''insert into fileondisk_fileinfo(fname, size, file_type, mod_time, folder, fullvolpath, volume_id)
                 values(?,?,?,?,?,?,?)'''

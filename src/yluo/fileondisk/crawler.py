@@ -15,8 +15,57 @@ from . import models
 from . import systeminfo
 from . import fodconfigs
 
+
+
+
 def printt(text, end="\n"):
     print(str(datetime.datetime.now()) + ': ' + text, end)
+
+
+class FileObject:
+    def __init__(self, fname, fsize, folder):
+        self.fname = fname
+        self.fsize = fsize
+        self.folder = folder
+
+    def __str__(self):
+        return self.folder + '/' + self.fname + '--' + str(self.fsize)
+
+    def __eq__(self, other):
+        return (self.fname == other.fname) and (self.fsize == other.fsize)
+
+    def __hash__(self):
+        return hash(self.fname + str(self.fsize))
+
+
+def collect_folder_tree(folder_root, io_file_objects):
+    '''recursively descend the directory tree rooted at top,
+    calling the callback function for each regular file'''
+
+    try:
+        for diritem in os.listdir(folder_root):
+            pathname = os.path.join(folder_root, diritem)
+            
+            try:
+                statdata = os.stat(pathname)
+            except FileNotFoundError as file_err:
+                print(file_err)
+                print("Skip file " + pathname)
+                continue
+
+            mode = statdata.st_mode
+            if stat.S_ISDIR(mode):
+                # It's a directory, recurse into it
+                collect_folder_tree(pathname, io_file_objects)
+            elif stat.S_ISREG(mode):
+                io_file_objects.append(FileObject(diritem, statdata.st_size, folder_root))
+            else:
+                # Unknown file type, print a message
+                print('Skipping %s' % pathname)
+    except PermissionError as permit_err:
+        print('Skipping {dir} due to permission error:'.format(dir=folder_root))
+        print(permit_err)
+
 
 
 
@@ -27,7 +76,7 @@ class SystemInformation(systeminfo.RawSystemInformation):
     def chr_incr(self, in_char, incr):
         return chr(ord(in_char)+incr)
 
-    def save_volumeinfo(self, drive):
+    def save_volumeinfo(self, drive, is_raid1):
         print(drive)
         for disk in self.hard_disks:
             dev_id = self.chr_incr('a', disk.Index)
@@ -42,7 +91,8 @@ class SystemInformation(systeminfo.RawSystemInformation):
                                         partitions=disk.Partitions,
                                         SMART_pass=1 - alert,
                                         SMART_info=',\n'.join(smart_info),
-                                        machine=disk.SystemName, media_type=disk.MediaType)
+                                        machine=disk.SystemName, media_type=disk.MediaType,
+                                        is_raid1=is_raid1)
             disk_instance.save()
 
             
@@ -309,8 +359,7 @@ def visitfile(file):
     pass
 
 
-
-def crawl_folder(folder_root):
+def raw_crawl(folder_root, is_raid1):
     start_time = datetime.datetime.now()
 
     print(os.getcwd())
@@ -321,7 +370,7 @@ def crawl_folder(folder_root):
 
     root_abspath = os.path.abspath(folder_root)
     print(root_abspath)
-    volume = systeminfo.save_volumeinfo(root_abspath[:2].upper())
+    volume = systeminfo.save_volumeinfo(root_abspath[:2].upper(), is_raid1)
     filecrawler = FileCrawler()
     file_count = filecrawler.top_collect_fileinfo(root_abspath, volume, visitfile)
     printt("========== Finish crawling "+ root_abspath)
@@ -331,3 +380,11 @@ def crawl_folder(folder_root):
     if originalfile:
         print("Copy RAM db back to original db file " + originalfile)
         os.system("copy db.sqlite3 " + originalfile)
+    
+
+def crawl_folder(folder_root):
+    raw_crawl(folder_root, 0)
+
+def crawl_as_raid1(raid1_folder):
+    raw_crawl(raid1_folder, 1)
+    
