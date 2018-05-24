@@ -9,7 +9,7 @@ without visiting the file system.
 We can set a disk as RAID1 disk. We then can check whether some files in a given folder are duplicated with files on such RAID1 disk, 
 and provide options to delete such tripple-duplicated files.
 
-We use a Table in SQLite to record the ID of RAID1 volumes.
+We use a field "is_raid1" in SQLite "disk" table to indicate whether a disk is RAID1 or not.
 
 # Supporting Technologies
 
