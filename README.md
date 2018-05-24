@@ -10,3 +10,8 @@ We can set a disk as RAID1 disk. We then can check whether some files in a given
 and provide options to delete such tripple-duplicated files.
 
 We use a Table in SQLite to record the ID of RAID1 volumes.
+
+# Supporting Technologies
+
+SQLite3 Syntax Link: https://sqlite.org/doclist.html
+Django model migration: https://docs.djangoproject.com/en/2.0/topics/migrations/
