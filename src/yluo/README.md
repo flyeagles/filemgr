@@ -52,3 +52,7 @@ Use that list to filter all the file objects in RAID1 disks.
 Show that list in browser.
 
 Now we need be able to use that list to locate the file items in target folder.
+
+## Delete duplicated files
+Add new button to do the deletion.
+Deletion on Windows will send files to Recycel Bin. Use Python Winshell module. See http://winshell.readthedocs.io/en/latest/recycle-bin.html
