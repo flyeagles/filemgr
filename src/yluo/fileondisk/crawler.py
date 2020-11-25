@@ -162,10 +162,10 @@ class SystemInformation(systeminfo.RawSystemInformation):
                 value = re.search(r" -\s+(\d+)", line).group(1)
                 drive_results.append("Airflow_Temperature_Cel: " + str(value))  # eg. 34 (Min/Max 30/43)
             elif "Wear_Leveling_Count" in line:
-                value = re.search(r" - (.+?)", line).group(1)
+                value = re.search(r" -\s+(\d+)", line).group(1)
                 drive_results.append("Wear leveling count: " + str(int(value)))
             elif "Reallocated_Event_Count" in line:
-                value = re.search(r" - (.+?)", line).group(1)
+                value = re.search(r" -\s+(\d+)", line).group(1)
                 # try-except is needed in case Rll_Ev_Ct value is messed up
                 skip = False
                 try:
